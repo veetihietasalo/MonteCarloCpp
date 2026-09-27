@@ -1,0 +1,17 @@
+# Build outputs
+build/
+cmake-build-*/
+*.exe
+*.obj
+*.o
+*.dll
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.so
+*.a
+
+# IDE
+.vs/
+.vscode/
