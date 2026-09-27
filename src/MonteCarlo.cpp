@@ -9,29 +9,12 @@ MonteCarloPricer::MonteCarloPricer(double spot, double vol, double rate,
                                    double time)
     : m_spot(spot), m_vol(vol), m_rate(rate), m_time(time) {}
 
+// The same loop as the template in MonteCarlo.hpp, instantiated for the abstract base, so
+// every path makes a virtual call.
 MonteCarloResult MonteCarloPricer::price(const Payoff &payoff,
-                                         size_t numPaths)
+                                         size_t numPaths) const
 {
-  Statistics stats;
-
-  // Pre-calculate constants
-  double drift = (m_rate - 0.5 * m_vol * m_vol) * m_time;
-  double diffusion = m_vol * std::sqrt(m_time);
-
-  for (size_t i = 0; i < numPaths; ++i)
-  {
-    double z = Random::getNormal();
-    double spotT = m_spot * std::exp(drift + diffusion * z);
-    double payoffVal = payoff(spotT);
-    stats.add(payoffVal);
-  }
-
-  double discount = std::exp(-m_rate * m_time);
-  double price = discount * stats.mean();
-  double stdError = discount * stats.stdError();
-  double variance = stats.variance();
-
-  return {price, stdError, variance};
+  return price<Payoff>(payoff, numPaths);
 }
 
 MonteCarloResult MonteCarloPricer::pricePathDependent(const PathPayoff &payoff,

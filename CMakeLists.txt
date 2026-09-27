@@ -53,7 +53,13 @@ if (BUILD_TESTS)
 
     add_executable(test_payoffs src/test_payoffs.cpp src/Random.cpp)
     add_test(NAME payoffs_test COMMAND test_payoffs)
+
+    add_executable(test_dispatch src/test_dispatch.cpp src/MonteCarlo.cpp src/Random.cpp)
+    add_test(NAME dispatch_test COMMAND test_dispatch)
 endif()
+
+# Virtual vs concept-constrained template payoff calls (W05)
+add_executable(bench_dispatch src/bench_dispatch.cpp src/MonteCarlo.cpp src/Random.cpp)
 
 # Provide a helpful message about CUDA
 if (BUILD_CUDA)
