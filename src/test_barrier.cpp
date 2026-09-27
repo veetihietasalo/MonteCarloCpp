@@ -1,5 +1,7 @@
 // Simple deterministic tests for BarrierOption behavior
+#undef NDEBUG // keep assert() active in every build type, Release included
 #include "BarrierOption.hpp"
+#include <cassert>
 #include <iostream>
 #include <vector>
 
@@ -22,6 +24,10 @@ int main_test_barrier()
   std::cout << "downOutCallWithRebate payoff (expected 5): " << downOutCallWithRebate(path) << std::endl;
   std::cout << "downInPut payoff (expected 13): " << downInPut(path) << std::endl;
 
+  assert(downOutCall(path) == 0.0);
+  assert(downOutCallWithRebate(path) == 5.0);
+  assert(downInPut(path) == 13.0);
+  std::cout << "All barrier tests passed." << std::endl;
   return 0;
 }
 

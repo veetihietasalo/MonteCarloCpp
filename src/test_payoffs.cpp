@@ -1,3 +1,4 @@
+#undef NDEBUG // keep assert() active in every build type, Release included
 #include "Payoff.hpp"
 #include "AsianOption.hpp"
 #include "LookbackOption.hpp"

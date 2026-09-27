@@ -16,7 +16,9 @@ public:
 };
 
 // European Call Option Payoff
-class PayoffCall : public Payoff
+// `final`: nothing can derive from it, so a call through a PayoffCall (not a Payoff)
+// can be resolved at compile time and inlined.
+class PayoffCall final : public Payoff
 {
 public:
   PayoffCall(double strike) : m_strike(strike) {}
@@ -34,7 +36,7 @@ private:
 };
 
 // European Put Option Payoff
-class PayoffPut : public Payoff
+class PayoffPut final : public Payoff
 {
 public:
   PayoffPut(double strike) : m_strike(strike) {}
