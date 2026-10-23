@@ -67,12 +67,12 @@ MonteCarloResult MonteCarloPricer::priceParallel(const Payoff &payoff,
     size_t paths = (i == numThreads - 1) ? (numPaths - i * pathsPerThread)
                                          : pathsPerThread;
 
-    futures.push_back(std::async(std::launch::async, [this, &payoff, paths]()
+    futures.push_back(std::async(std::launch::async, [this, &payoff, paths, i]()
                                  {
       Statistics localStats;
-      // Re-seed RNG for each thread to ensure independence
-      Random::init(42 +
-                   std::hash<std::thread::id>{}(std::this_thread::get_id()));
+      // A different seed per thread gives independent streams, and the same result on
+      // every run with the same thread count.
+      Random::init(42 + i);
 
       double drift = (m_rate - 0.5 * m_vol * m_vol) * m_time;
       double diffusion = m_vol * std::sqrt(m_time);

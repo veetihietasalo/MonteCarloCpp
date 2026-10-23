@@ -56,6 +56,9 @@ if (BUILD_TESTS)
 
     add_executable(test_dispatch src/test_dispatch.cpp src/MonteCarlo.cpp src/Random.cpp)
     add_test(NAME dispatch_test COMMAND test_dispatch)
+
+    add_executable(test_random src/test_random.cpp src/Random.cpp)
+    add_test(NAME random_test COMMAND test_random)
 endif()
 
 # Virtual vs concept-constrained template payoff calls (W05)

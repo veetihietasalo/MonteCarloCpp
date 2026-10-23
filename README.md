@@ -17,8 +17,8 @@ CI runs the same steps on Ubuntu (GCC) and Windows (MSVC) on every push. On Wind
 ## Programs
 
 - `MonteCarloEngine`: prices European, Asian, barrier and lookback options and times single-threaded vs multi-threaded runs.
-- `bench_dispatch`: a virtual payoff call against a template one ([results and generated code](docs/devirtualization.md)).
-- `test_payoffs`, `test_barrier`, `test_dispatch`: run by `ctest`.
+- `bench_dispatch`: a virtual payoff call against a template one, over data in memory and in cache ([results and generated code](docs/devirtualization.md)).
+- `test_payoffs`, `test_barrier`, `test_dispatch`, `test_random`: run by `ctest`.
 
 ## Pricing any payoff
 
