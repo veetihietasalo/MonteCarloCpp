@@ -3,7 +3,7 @@
 
 class Random {
 public:
-    // Initialize with seed
+    // Seed this thread's generator. The same seed always gives the same draws.
     static void init(uint64_t seed);
 
     // Get standard normal distribution sample N(0,1)

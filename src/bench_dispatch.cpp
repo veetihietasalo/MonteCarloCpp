@@ -2,8 +2,11 @@
 // resolved at compile time through the EuropeanPayoff concept.
 //
 //   1. Payoff only: payoff(spot) over 20M pre-generated spot prices, written to an output
-//      array. Nothing else is in the loop, so this isolates the call.
-//   2. Whole pricer: MonteCarloPricer::price() for 5M paths, same seed. The random number
+//      array. Nothing else is in the loop, so this isolates the call. The two arrays hold
+//      320 MB, more than any cache, so once the call is cheap enough this measures memory.
+//   2. Payoff only, in L1 cache: the same loop over 2048 spots (16 KB in, 16 KB out),
+//      repeated 20,000 times. This measures the call itself.
+//   3. Whole pricer: MonteCarloPricer::price() for 5M paths, same seed. The random number
 //      and exp() per path are included.
 //
 // Each figure is the median of 5 runs. Usage: bench_dispatch
@@ -17,6 +20,10 @@
 #include <cstdio>
 #include <functional>
 #include <vector>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 namespace {
 
@@ -39,6 +46,16 @@ double medianNs(Fn&& fn, int reps = 5) {
 template <typename P>
 void applyPayoff(const P& payoff, const std::vector<double>& spots, std::vector<double>& out) {
   for (size_t i = 0; i < spots.size(); ++i) out[i] = payoff(spots[i]);
+}
+
+// Tells the compiler that any memory may be read or written here, so it can't merge or skip
+// repeats of a loop whose inputs haven't changed.
+inline void clobberMemory() {
+#if defined(_MSC_VER)
+  _ReadWriteBarrier();
+#else
+  __asm__ __volatile__("" : : : "memory");
+#endif
 }
 
 double checksum(const std::vector<double>& v) {
@@ -75,7 +92,33 @@ int main() {
   std::printf("  %-40s %6.2f ns per call  (%.1fx)\n", "template, PayoffCall (final)", finalNs, virtualNs / finalNs);
   std::printf("  %-40s %6.2f ns per call  (%.1fx)\n", "template, lambda", lambdaNs, virtualNs / lambdaNs);
 
-  // ---- 2. whole pricer ----
+  // ---- 2. payoff only, in L1 cache ----
+  constexpr size_t kHotSpots = 2048;
+  constexpr size_t kHotRepeats = 20'000;
+  std::vector<double> hotSpots(spots.begin(), spots.begin() + kHotSpots);
+  std::vector<double> hotOut(kHotSpots);
+  const auto hotLoop = [&](const auto& payoff) {
+    for (size_t r = 0; r < kHotRepeats; ++r) {
+      applyPayoff(payoff, hotSpots, hotOut);
+      clobberMemory();
+    }
+  };
+  constexpr double kHotCalls = double(kHotSpots) * double(kHotRepeats);
+
+  const double hotVirtualNs = medianNs([&] { hotLoop(base); }) / kHotCalls;
+  const double hotVirtualSum = checksum(hotOut);
+  const double hotFinalNs = medianNs([&] { hotLoop(call); }) / kHotCalls;
+  const double hotFinalSum = checksum(hotOut);
+  const double hotLambdaNs = medianNs([&] { hotLoop(lambda); }) / kHotCalls;
+  const double hotLambdaSum = checksum(hotOut);
+
+  std::printf("\nPayoff only, in L1 cache: %zu spots, repeated %zu times, median of 5\n", kHotSpots, kHotRepeats);
+  std::printf("  %-40s %6.2f ns per call\n", "virtual, through const Payoff&", hotVirtualNs);
+  std::printf("  %-40s %6.2f ns per call  (%.1fx)\n", "template, PayoffCall (final)", hotFinalNs,
+              hotVirtualNs / hotFinalNs);
+  std::printf("  %-40s %6.2f ns per call  (%.1fx)\n", "template, lambda", hotLambdaNs, hotVirtualNs / hotLambdaNs);
+
+  // ---- 3. whole pricer ----
   constexpr size_t kPaths = 5'000'000;
   MonteCarloPricer pricer(100.0, 0.2, 0.05, 1.0);
   MonteCarloResult rVirtual{}, rFinal{}, rLambda{};
@@ -91,8 +134,8 @@ int main() {
               pVirtual / pLambda);
 
   // Same inputs must give the same answers, whichever way the payoff is called.
-  const bool same = virtualSum == finalSum && finalSum == lambdaSum && rVirtual.price == rFinal.price &&
-                    rFinal.price == rLambda.price;
+  const bool same = virtualSum == finalSum && finalSum == lambdaSum && hotVirtualSum == hotFinalSum &&
+                    hotFinalSum == hotLambdaSum && rVirtual.price == rFinal.price && rFinal.price == rLambda.price;
   if (!same) {
     std::printf("\nMISMATCH between virtual and template results\n");
     return 1;
